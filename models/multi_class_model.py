@@ -30,7 +30,7 @@ class MultiClassModel(pl.LightningModule):
         self.lr = lr
         self.criterion = nn.BCEWithLogitsLoss()
 
-        self.accuracy = torchmetrics.Accuracy(task="multiclass")
+        self.accuracy = Accuracy(task="multiclass")
 
     
     def forward(self, input_ids, attention_mask, token_type_ids):
