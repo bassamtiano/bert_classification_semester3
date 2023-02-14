@@ -8,7 +8,7 @@ import pytorch_lightning as pl
 from transformers import BertModel
 from sklearn.metrics import classification_report
 
-from torchmetrics import Accuracy
+from torchmetrics import Accuracy, F1Score, PrecisionRecallCurve
 
 class MultiClassModel(pl.LightningModule):
     def __init__(self,
@@ -20,6 +20,8 @@ class MultiClassModel(pl.LightningModule):
         torch.manual_seed(1)
         random.seed(1)
 
+        self.num_classes = n_out
+
         self.bert = BertModel.from_pretrained('indolem/indobert-base-uncased')
         self.pre_classifier = nn.Linear(768, 768)
         self.dropout = nn.Dropout(dropout)
@@ -30,9 +32,14 @@ class MultiClassModel(pl.LightningModule):
         self.lr = lr
         self.criterion = nn.BCEWithLogitsLoss()
 
-        self.accuracy = Accuracy(task="multiclass")
+        self.accuracy = Accuracy(task="multiclass", num_classes = self.num_classes)
+        self.f1 = F1Score(task = "multiclass", 
+                          average = "micro", 
+                          multidim_average = "global",
+                          num_classes = self.num_classes)
+        self.precission_recall = PrecisionRecallCurve(task = "multiclass", num_classes = self.num_classes)
 
-    
+    # Model
     def forward(self, input_ids, attention_mask, token_type_ids):
         bert_out = self.bert(input_ids = input_ids,
                              attention_mask = attention_mask,
@@ -69,16 +76,19 @@ class MultiClassModel(pl.LightningModule):
 
         loss = self.criterion(out, target = y.float())
 
-        # pred = out.argmax(1).cpu()
-        # true = y.argmax(1).cpu()
+        pred = out.argmax(1).cpu()
+        true = y.argmax(1).cpu()
 
-        self.accuracy(out, y)
+        acc = self.accuracy(pred, true)
+        f1_score = self.f1(pred, true)
+        precission, recall, _ = self.precission_recall(out, y)
         # report = classification_report(true, pred, output_dict = True, zero_division = 0)
 
-        self.log("accuracy", self.accuracy, prog_bar = True)
+        self.log("accuracy", acc, prog_bar = True)
+        self.log("f1_score", f1_score, prog_bar = True)
         self.log("loss", loss)
 
-        return {"loss": loss, "predictions": out, "labels": y}
+        return {"loss": loss, "predictions": out, "F1": f1_score, "labels": y}
 
     def validation_step(self, valid_batch, batch_idx):
         x_input_ids, x_token_type_ids, x_attention_mask, y = valid_batch
@@ -94,9 +104,11 @@ class MultiClassModel(pl.LightningModule):
         # true = y.argmax(1).cpu()
 
         # report = classification_report(true, pred, output_dict = True, zero_division = 0)
-        self.accuracy(out, y)
-
-        self.log("accuracy", self.accuracy, prog_bar = True)
+        acc = self.accuracy(out, y)
+        f1_score = self.f1(out, y)
+        
+        self.log("f1_score", f1_score, prog_bar = True)
+        self.log("accuracy", acc, prog_bar = True)
         self.log("loss", loss)
 
         return loss
@@ -127,11 +139,12 @@ class MultiClassModel(pl.LightningModule):
         predictions = torch.stack(predictions)
 
         # Hitung akurasi
-        accuracy = Accuracy(task = "multiclass")
-        acc = accuracy(predictions, labels)
-
+        
+        # accuracy = Accuracy(task = "multiclass", num_classes = self.num_classes)
+        acc = self.accuracy(predictions, labels)
+        f1_score = self.f1(predictions, labels)
         # Print Akurasinya
-        print("Overall Training Accuracy : ", acc)
+        print("Overall Training Accuracy : ", acc , "| F1 Score : ", f1_score)
 
     def on_predict_epoch_end(self, outputs):
         labels = []
@@ -149,7 +162,7 @@ class MultiClassModel(pl.LightningModule):
 
         labels = torch.stack(labels).int()
         predictions = torch.stack(predictions)
-
-        accuracy = Accuracy(task = "multiclass")
-        acc = accuracy(predictions, labels)
-        print("Overall Testing Accuracy : ", acc)
+        
+        acc = self.accuracy(predictions, labels)
+        f1_score = self.f1(predictions, labels)
+        print("Overall Testing Accuracy : ", acc , "| F1 Score : ", f1_score)
