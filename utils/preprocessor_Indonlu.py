@@ -15,10 +15,13 @@ class PreprocessorIndoNLU(pl.LightningDataModule):
                  max_length,
                  n_classes,
                  batch_size):
+        super(PreprocessorIndoNLU, self).__init__()
+        # Superclass pytorch lightning data module wajib
         self.tokenizer = BertTokenizer.from_pretrained('indolem/indobert-base-uncased')
         self.max_length = max_length
         self.n_classes = n_classes
         self.batch_size = batch_size
+        
     
     def load_data(self, dataset_type = "train"):
         indonlu_data = load_dataset("indonlp/indonlu", "emot", split = dataset_type)
@@ -57,11 +60,15 @@ class PreprocessorIndoNLU(pl.LightningDataModule):
         return tensor_dataset
     
     def setup(self, stage = None):
+        train_data = self.load_data(dataset_type = "train")
+        valid_data = self.load_data(dataset_type = "validation")
+        test_data = self.load_data(dataset_type = "test")
+        
         if stage == "fit":
-            self.train_data = self.load_data(dataset_type = "train")
-            self.valid_data = self.load_data(dataset_type = "validation")
+            self.train_data = train_data
+            self.valid_data = valid_data
         elif stage == "test":
-            self.test_data = self.load_data(dataset_type = "test")
+            self.test_data = test_data
     
     def train_dataloader(self):
         return DataLoader(
@@ -73,22 +80,23 @@ class PreprocessorIndoNLU(pl.LightningDataModule):
     
     def val_dataloader(self):
         return DataLoader(
-            dataset = self.train_data,
+            dataset = self.valid_data,
             batch_size = self.batch_size,
             num_workers = 4
         )
     
     def test_dataloader(self):
         return DataLoader(
-            dataset = self.train_data,
+            dataset = self.test_data,
             batch_size = self.batch_size,
             num_workers = 4
         )
-    
-    
-if __name__ == "__main__":
-    
+        
+if __name__ == '__main__':
     pre = PreprocessorIndoNLU(max_length = 100,
-                              n_classes=5)
+                              n_classes = 5,
+                              batch_size = 40)
     
-    pre.load_data()
+    pre.setup("fit")
+    print(pre.train_dataloader())
+    print(pre.val_dataloader())
