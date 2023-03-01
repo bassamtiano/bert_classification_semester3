@@ -34,8 +34,7 @@ class MultiClassModel(pl.LightningModule):
 
         self.accuracy = MulticlassAccuracy(task="multiclass", num_classes = self.num_classes)
         self.f1 = MulticlassF1Score(task = "multiclass", 
-                          average = "micro", 
-                          multidim_average = "global",
+                          average = "micro",
                           num_classes = self.num_classes)
         # self.precission_recall = PrecisionRecallCurve(task = "multiclass", num_classes = self.num_classes)
 
@@ -69,19 +68,19 @@ class MultiClassModel(pl.LightningModule):
         
         out = self(input_ids = x_input_ids)
         # ke tiga parameter di input dan diolah oleh method / function forward
-
+        f1_score = self.f1(out, y.float())
         loss = self.criterion(out, target = y.float())
 
         # pred = out
         # true = y
 
         # acc = self.accuracy(out, y)
-        # f1_score = self.f1(out, y)
+        
         # precission, recall, _ = self.precission_recall(out, y)
         # report = classification_report(true, pred, output_dict = True, zero_division = 0)
 
         # self.log("accuracy", acc, prog_bar = True)
-        # self.log("f1_score", f1_score, prog_bar = True)
+        self.log("f1_score", f1_score, prog_bar = True)
         self.log("loss", loss)
 
         # return {"loss": loss, "predictions": out, "F1": f1_score, "labels": y}
@@ -100,9 +99,9 @@ class MultiClassModel(pl.LightningModule):
 
         # report = classification_report(true, pred, output_dict = True, zero_division = 0)
         # acc = self.accuracy(out, y)
-        # f1_score = self.f1(out, y)
+        f1_score = self.f1(out, y)
         
-        # self.log("f1_score", f1_score, prog_bar = True)
+        self.log("f1_score", f1_score, prog_bar = True)
         # self.log("accuracy", acc, prog_bar = True)
         self.log("loss", loss)
 
@@ -158,4 +157,4 @@ class MultiClassModel(pl.LightningModule):
         
     #     acc = self.accuracy(predictions, labels)
     #     f1_score = self.f1(predictions, labels)
-    #     print("Overall Testing Accuracy : ", acc , "| F1 Score : ", f1_score)
+#     print("Overall Testing Accuracy : ", acc , "| F1 Score : ", f1_score)

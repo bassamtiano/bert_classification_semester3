@@ -53,6 +53,8 @@ class PreprocessorIndoNLU(pl.LightningDataModule):
         
         # Menjadikan List menjadi tensor
         x_tensor = torch.tensor(x_all)
+        # input_ids, 
+        
         y_tensor = torch.tensor(y_all)
         
         # tensor di bungkus menjadi tensor dataset
